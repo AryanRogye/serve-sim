@@ -1,10 +1,6 @@
-node_modules/
-dist/
 .build/
 .swiftpm/
 *.o
 *.d
 *.swp
 .DS_Store
-*.tsbuildinfo
-/packages/serve-sim/.xcode-build

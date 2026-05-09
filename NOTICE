@@ -1,0 +1,11 @@
+SwiftSimStreamer
+
+This project contains code derived from serve-sim by Evan Bacon:
+https://github.com/EvanBacon/serve-sim
+
+serve-sim is licensed under the Apache License, Version 2.0.
+
+This repository has been substantially modified from the original project:
+the TypeScript CLI, React browser UI, middleware, WebSocket server, and npm
+workspace were removed; the native simulator framebuffer, accessibility, touch,
+and keyboard mechanisms were adapted into a SwiftPM-based macOS SwiftUI app.
