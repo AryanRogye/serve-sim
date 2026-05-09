@@ -47,6 +47,6 @@ struct SidebarView: View {
             .padding(10)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .navigationSplitViewColumnWidth(min: 220, ideal: 260)
+        .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 280)
     }
 }

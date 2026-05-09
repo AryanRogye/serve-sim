@@ -4,18 +4,20 @@ struct SimulatorWorkspaceView: View {
     @Bindable var store: SimulatorSessionStore
 
     var body: some View {
-        HSplitView {
+        HStack(spacing: 0) {
             SimulatorCanvasView(store: store)
-                .frame(minWidth: 520)
+                .frame(minWidth: 360)
+
+            Divider()
 
             VSplitView {
                 AccessibilityInspectorView(store: store)
                     .frame(minHeight: 260)
 
                 RuntimeInspectorView(store: store)
-                    .frame(minHeight: 220)
+                    .frame(minHeight: 260)
             }
-            .frame(minWidth: 320, idealWidth: 380, maxWidth: 520)
+            .frame(width: 380)
         }
         .navigationTitle(store.selectedDevice?.name ?? "Simulator Streamer")
     }

@@ -1,6 +1,8 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
+#import <stdarg.h>
+#import <unistd.h>
 
 static NSString *RIClassName(id object) {
     if (!object) return @"nil";
@@ -40,6 +42,24 @@ static NSString *RIControlEventsDescription(UIControlEvents events) {
     return [names componentsJoinedByString:@"|"];
 }
 
+static NSString *RICallStackDescription(void) {
+    NSArray<NSString *> *symbols = [NSThread callStackSymbols];
+    if (symbols.count == 0) return @"<empty>";
+    return [symbols componentsJoinedByString:@"\n[RuntimeInspector] "];
+}
+
+static void RILogIntercept(NSString *format, ...) NS_FORMAT_FUNCTION(1, 2);
+static void RILogIntercept(NSString *format, ...) {
+    va_list arguments;
+    va_start(arguments, format);
+    NSString *message = [[NSString alloc] initWithFormat:format arguments:arguments];
+    va_end(arguments);
+
+    NSLog(@"[RuntimeInspector] %@\n[RuntimeInspector] callStackSymbols:\n[RuntimeInspector] %@",
+          message,
+          RICallStackDescription());
+}
+
 static void RIExchangeInstanceMethod(Class cls, SEL original, SEL replacement) {
     Method originalMethod = class_getInstanceMethod(cls, original);
     Method replacementMethod = class_getInstanceMethod(cls, replacement);
@@ -59,11 +79,11 @@ static void RIExchangeInstanceMethod(Class cls, SEL original, SEL replacement) {
 @implementation UIApplication (RuntimeInspector)
 
 - (BOOL)ri_sendAction:(SEL)action to:(id)target from:(id)sender forEvent:(UIEvent *)event {
-    NSLog(@"[RuntimeInspector] UIApplication.sendAction action=%@ target=%@ sender=%@ event=%@",
-          NSStringFromSelector(action),
-          RIObjectDescription(target),
-          RIObjectDescription(sender),
-          RIClassName(event));
+    RILogIntercept(@"UIApplication.sendAction action=%@ target=%@ sender=%@ event=%@",
+                   NSStringFromSelector(action),
+                   RIObjectDescription(target),
+                   RIObjectDescription(sender),
+                   RIClassName(event));
 
     return [self ri_sendAction:action to:target from:sender forEvent:event];
 }
@@ -78,21 +98,21 @@ static void RIExchangeInstanceMethod(Class cls, SEL original, SEL replacement) {
 @implementation UIControl (RuntimeInspector)
 
 - (void)ri_addTarget:(id)target action:(SEL)action forControlEvents:(UIControlEvents)controlEvents {
-    NSLog(@"[RuntimeInspector] UIControl.addTarget control=%@ target=%@ action=%@ events=%@",
-          RIObjectDescription(self),
-          RIObjectDescription(target),
-          NSStringFromSelector(action),
-          RIControlEventsDescription(controlEvents));
+    RILogIntercept(@"UIControl.addTarget control=%@ target=%@ action=%@ events=%@",
+                   RIObjectDescription(self),
+                   RIObjectDescription(target),
+                   NSStringFromSelector(action),
+                   RIControlEventsDescription(controlEvents));
 
     [self ri_addTarget:target action:action forControlEvents:controlEvents];
 }
 
 - (void)ri_sendAction:(SEL)action to:(id)target forEvent:(UIEvent *)event {
-    NSLog(@"[RuntimeInspector] UIControl.sendAction control=%@ target=%@ action=%@ event=%@",
-          RIObjectDescription(self),
-          RIObjectDescription(target),
-          NSStringFromSelector(action),
-          RIClassName(event));
+    RILogIntercept(@"UIControl.sendAction control=%@ target=%@ action=%@ event=%@",
+                   RIObjectDescription(self),
+                   RIObjectDescription(target),
+                   NSStringFromSelector(action),
+                   RIClassName(event));
 
     [self ri_sendAction:action to:target forEvent:event];
 }
@@ -107,19 +127,19 @@ static void RIExchangeInstanceMethod(Class cls, SEL original, SEL replacement) {
 @implementation UIGestureRecognizer (RuntimeInspector)
 
 - (instancetype)ri_initWithTarget:(id)target action:(SEL)action {
-    NSLog(@"[RuntimeInspector] UIGestureRecognizer.init recognizer=%@ target=%@ action=%@",
-          RIObjectDescription(self),
-          RIObjectDescription(target),
-          NSStringFromSelector(action));
+    RILogIntercept(@"UIGestureRecognizer.init recognizer=%@ target=%@ action=%@",
+                   RIObjectDescription(self),
+                   RIObjectDescription(target),
+                   NSStringFromSelector(action));
 
     return [self ri_initWithTarget:target action:action];
 }
 
 - (void)ri_addTarget:(id)target action:(SEL)action {
-    NSLog(@"[RuntimeInspector] UIGestureRecognizer.addTarget recognizer=%@ target=%@ action=%@",
-          RIObjectDescription(self),
-          RIObjectDescription(target),
-          NSStringFromSelector(action));
+    RILogIntercept(@"UIGestureRecognizer.addTarget recognizer=%@ target=%@ action=%@",
+                   RIObjectDescription(self),
+                   RIObjectDescription(target),
+                   NSStringFromSelector(action));
 
     [self ri_addTarget:target action:action];
 }

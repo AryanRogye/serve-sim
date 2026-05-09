@@ -17,10 +17,14 @@ final class SimulatorSessionStore {
     var axOverlayEnabled = true
     var textToType = ""
     var runtimeBundleID = ""
+    var runtimeAppSearchText = ""
+    var runtimeInstalledApps: [SimulatorInstalledApp] = []
     var runtimeInspectorStatus = "Runtime inspector idle."
     var runtimeInspectorLogs: [String] = []
     var isRuntimeInspectorBusy = false
     var isRuntimeLogStreaming = false
+    var isRuntimeAppListLoading = false
+    var runtimeShowsStackFrames = false
     var statusText = "Select a booted simulator."
     var errorText: String?
 
@@ -40,11 +44,23 @@ final class SimulatorSessionStore {
         return accessibilitySnapshot?.elements.first { $0.id == selectedElementID }
     }
 
+    var filteredRuntimeInstalledApps: [SimulatorInstalledApp] {
+        let query = runtimeAppSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return runtimeInstalledApps }
+
+        return runtimeInstalledApps.filter {
+            $0.title.localizedCaseInsensitiveContains(query)
+                || $0.bundleIdentifier.localizedCaseInsensitiveContains(query)
+                || $0.applicationType.localizedCaseInsensitiveContains(query)
+        }
+    }
+
     func refreshDevices() {
         do {
             devices = try SimulatorDeviceService.bootedDevices()
             if selectedDeviceID == nil || !devices.contains(where: { $0.id == selectedDeviceID }) {
                 selectedDeviceID = devices.first?.id
+                runtimeInstalledApps = []
             }
             statusText = devices.isEmpty ? "No booted simulators found." : "Ready."
             errorText = nil
@@ -52,6 +68,40 @@ final class SimulatorSessionStore {
             errorText = error.localizedDescription
             statusText = "Could not read simulators."
         }
+    }
+
+    func refreshRuntimeInstalledApps() {
+        guard let device = selectedDevice else {
+            runtimeInstalledApps = []
+            runtimeInspectorStatus = "Select a booted simulator first."
+            return
+        }
+
+        isRuntimeAppListLoading = true
+        runtimeInspectorStatus = "Loading installed apps..."
+        errorText = nil
+
+        Task {
+            do {
+                let apps = try await Task.detached(priority: .userInitiated) {
+                    try SimulatorAppService.installedApps(deviceUDID: device.udid)
+                }.value
+                runtimeInstalledApps = apps
+                runtimeInspectorStatus = apps.isEmpty
+                    ? "No installed apps found on \(device.name)."
+                    : "Loaded \(apps.count) apps from \(device.name)."
+            } catch {
+                runtimeInstalledApps = []
+                runtimeInspectorStatus = "Could not load installed apps."
+                errorText = error.localizedDescription
+            }
+            isRuntimeAppListLoading = false
+        }
+    }
+
+    func selectRuntimeApp(_ app: SimulatorInstalledApp) {
+        runtimeBundleID = app.bundleIdentifier
+        runtimeInspectorStatus = "Selected \(app.title) (\(app.bundleIdentifier))."
     }
 
     func startSelectedDevice() {
