@@ -30,13 +30,18 @@ struct SidebarView: View {
                 Text(store.statusText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                    .textSelection(.enabled)
+                    .lineLimit(4)
 
                 if let error = store.errorText {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .lineLimit(3)
+                    ScrollView {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(maxHeight: 92)
                 }
             }
             .padding(10)

@@ -8,8 +8,14 @@ struct SimulatorWorkspaceView: View {
             SimulatorCanvasView(store: store)
                 .frame(minWidth: 520)
 
-            AccessibilityInspectorView(store: store)
-                .frame(minWidth: 260, idealWidth: 320, maxWidth: 420)
+            VSplitView {
+                AccessibilityInspectorView(store: store)
+                    .frame(minHeight: 260)
+
+                RuntimeInspectorView(store: store)
+                    .frame(minHeight: 220)
+            }
+            .frame(minWidth: 320, idealWidth: 380, maxWidth: 520)
         }
         .navigationTitle(store.selectedDevice?.name ?? "Simulator Streamer")
     }

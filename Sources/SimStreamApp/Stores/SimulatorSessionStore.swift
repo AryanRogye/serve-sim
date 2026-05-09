@@ -16,11 +16,17 @@ final class SimulatorSessionStore {
     var isStreaming = false
     var axOverlayEnabled = true
     var textToType = ""
+    var runtimeBundleID = ""
+    var runtimeInspectorStatus = "Runtime inspector idle."
+    var runtimeInspectorLogs: [String] = []
+    var isRuntimeInspectorBusy = false
+    var isRuntimeLogStreaming = false
     var statusText = "Select a booted simulator."
     var errorText: String?
 
     private var streamer: SimulatorStreamer?
     private var inputController: SimulatorInputController?
+    private var runtimeLogStream: RuntimeInspectorLogStream?
     private var axTask: Task<Void, Never>?
     private var lastFrameUpdate = Date.distantPast
 
@@ -96,6 +102,7 @@ final class SimulatorSessionStore {
     func stop() {
         axTask?.cancel()
         axTask = nil
+        stopRuntimeLogStream()
         streamer?.stop()
         streamer = nil
         inputController = nil
@@ -151,6 +158,81 @@ final class SimulatorSessionStore {
         inputController?.pressBackspace()
     }
 
+    func launchRuntimeInspector() {
+        let bundleID = runtimeBundleID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !bundleID.isEmpty else {
+            runtimeInspectorStatus = "Enter a bundle id first."
+            return
+        }
+        guard let device = selectedDevice else {
+            runtimeInspectorStatus = "Select a booted simulator first."
+            return
+        }
+
+        isRuntimeInspectorBusy = true
+        runtimeInspectorStatus = "Building runtime inspector..."
+        errorText = nil
+
+        Task {
+            do {
+                let dylibPath = try await Task.detached(priority: .userInitiated) {
+                    try RuntimeInspectorService.buildDylib()
+                }.value
+
+                runtimeInspectorStatus = "Launching \(bundleID)..."
+
+                try await Task.detached(priority: .userInitiated) {
+                    try RuntimeInspectorService.launch(
+                        bundleID: bundleID,
+                        deviceUDID: device.udid,
+                        dylibPath: dylibPath
+                    )
+                }.value
+
+                runtimeInspectorStatus = "Injected into \(bundleID). Interact with the app to see selector logs."
+                startRuntimeLogStream()
+            } catch {
+                runtimeInspectorStatus = "Runtime inspector failed."
+                errorText = error.localizedDescription
+            }
+            isRuntimeInspectorBusy = false
+        }
+    }
+
+    func startRuntimeLogStream() {
+        guard let device = selectedDevice else {
+            runtimeInspectorStatus = "Select a booted simulator first."
+            return
+        }
+
+        stopRuntimeLogStream()
+        let stream = RuntimeInspectorLogStream(deviceUDID: device.udid) { [weak self] line in
+            Task { @MainActor in
+                self?.appendRuntimeLog(line)
+            }
+        }
+
+        do {
+            try stream.start()
+            runtimeLogStream = stream
+            isRuntimeLogStreaming = true
+            runtimeInspectorStatus = "Streaming selector logs."
+        } catch {
+            runtimeInspectorStatus = "Could not start selector logs."
+            errorText = error.localizedDescription
+        }
+    }
+
+    func stopRuntimeLogStream() {
+        runtimeLogStream?.stop()
+        runtimeLogStream = nil
+        isRuntimeLogStreaming = false
+    }
+
+    func clearRuntimeLogs() {
+        runtimeInspectorLogs.removeAll()
+    }
+
     private func acceptFrame(_ data: Data) {
         let now = Date()
         guard now.timeIntervalSince(lastFrameUpdate) >= 1.0 / 30.0 else { return }
@@ -190,6 +272,12 @@ final class SimulatorSessionStore {
         }
     }
 
+    private func appendRuntimeLog(_ line: String) {
+        runtimeInspectorLogs.append(line)
+        if runtimeInspectorLogs.count > 400 {
+            runtimeInspectorLogs.removeFirst(runtimeInspectorLogs.count - 400)
+        }
+    }
 }
 
 private extension AccessibilityElement {
