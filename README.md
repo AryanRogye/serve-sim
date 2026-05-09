@@ -15,6 +15,12 @@ them easier to study from Swift:
 - Simulator tap and keyboard injection
 - A GUI-driven runtime selector logging experiment
 
+## Demo
+
+[![SwiftSimStreamer demo](Media/swift-sim-streamer-demo-poster.png)](Media/swift-sim-streamer-demo.mp4)
+
+[Watch the demo video](Media/swift-sim-streamer-demo.mp4)
+
 ## Credit
 
 This project is derived from Evan Bacon's [`serve-sim`](https://github.com/EvanBacon/serve-sim).
