@@ -1,3 +1,5 @@
+
+
 # SwiftSimStreamer
 
 SwiftSimStreamer is a stripped-down native macOS SwiftUI app for looking inside
@@ -17,9 +19,11 @@ them easier to study from Swift:
 
 ## Demo
 
-[![SwiftSimStreamer demo](Media/swift-sim-streamer-demo-poster.png)](Media/swift-sim-streamer-demo.mp4)
 
-[Watch the demo video](Media/swift-sim-streamer-demo.mp4)
+
+https://github.com/user-attachments/assets/f5f2113e-5250-4754-9f54-4de85bc47eb3
+
+
 
 ## Credit
 
